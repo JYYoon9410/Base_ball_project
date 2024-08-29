@@ -1,8 +1,4 @@
 cx_Oracle
 pandas
-Counter
 wordcloud
-Hannanum
-datetime
-collections
 konlpy
