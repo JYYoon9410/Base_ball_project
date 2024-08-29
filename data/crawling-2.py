@@ -156,7 +156,7 @@ def collect_news_for_date_range(start_date, end_date):
 
 # 날짜를 임의로 설정하여 수집 실행
 if __name__ == "__main__":
-    start_date = datetime.date(2024, 8, 15)  # 예시: 시작 날짜
-    end_date = datetime.date(2024, 8, 20)  # 예시: 종료 날짜
+    start_date = datetime.date(2024, 8, 25)  # 예시: 시작 날짜
+    end_date = datetime.date(2024, 8, 26)  # 예시: 종료 날짜
 
     collect_news_for_date_range(start_date, end_date)

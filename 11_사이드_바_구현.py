@@ -67,41 +67,51 @@ elif menu == "구단별 뉴스토픽 조회":
         driver.get(url)
 
         all_news_data = []
+        wait = WebDriverWait(driver, 20)
+
         while True:
-            time.sleep(3)  # Wait for page load
-
-            list_items = driver.find_elements(By.CSS_SELECTOR, "#_newsList > ul > li")
-            news_data = []
-            for item in list_items:
-                link = item.find_element(By.CSS_SELECTOR, 'div > a')
-                title = link.find_element(By.TAG_NAME, 'span').text
-                href = link.get_attribute('href')
-                news_data.append({'title': title, 'href': href})
-
-            news_details = []
-            for item in news_data:
-                title = item['title']
-                href = item['href']
-                driver.get(href)
-                time.sleep(3)
-                try:
-                    content = driver.find_element(By.CSS_SELECTOR, '#comp_news_article > div._article_content').text
-                except Exception as e:
-                    content = f"내용 추출 실패: {e}"
-                news_details.append({'title': title, 'content': content, 'href': href})
-                driver.back()
-                time.sleep(1)
-
-            all_news_data.extend(news_details)
-
             try:
-                # Check if there's a next page
-                next_page = driver.find_element(By.CSS_SELECTOR, "#_pageList > a.next")
-                if next_page.is_displayed():
-                    next_page.click()
-                else:
+                list_items = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#_newsList > ul > li")))
+
+                news_data = []
+                for item in list_items:
+                    try:
+                        link = item.find_element(By.CSS_SELECTOR, 'div > a')
+                        title = link.find_element(By.TAG_NAME, 'span').text
+                        href = link.get_attribute('href')
+                        news_data.append({'title': title, 'href': href})
+                    except Exception as e:
+                        print(f"뉴스 항목 추출 오류: {e}")
+
+                news_details = []
+                for item in news_data:
+                    title = item['title']
+                    href = item['href']
+                    driver.get(href)
+                    try:
+                        content = wait.until(EC.presence_of_element_located(
+                            (By.CSS_SELECTOR, '#comp_news_article > div._article_content'))).text
+                    except Exception as e:
+                        content = f"내용 추출 실패: {e}"
+                    news_details.append({'title': title, 'content': content, 'href': href})
+                    driver.back()
+
+                all_news_data.extend(news_details)
+
+                try:
+                    # Check if there's a next page
+                    next_pages = driver.find_elements(By.CSS_SELECTOR, "#_pageList > a[data-id]")
+                    if next_pages:
+                        # Optionally, you can check the link for a specific pattern or condition
+                        next_pages[0].click()
+                    else:
+                        break
+                except Exception as e:
+                    print(f"다음 페이지 오류: {e}")
                     break
+
             except Exception as e:
+                print(f"페이지 로딩 오류: {e}")
                 break
 
         driver.quit()

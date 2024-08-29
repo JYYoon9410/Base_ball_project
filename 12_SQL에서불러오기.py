@@ -6,7 +6,7 @@ from konlpy.tag import Hannanum
 import datetime
 import io
 import matplotlib.pyplot as plt
-
+import pandas as pd
 
 # 데이터베이스 연결 설정
 def get_oracle_connection():
@@ -56,6 +56,27 @@ def fetch_news_and_keywords_from_db(start_date, end_date, team_code):
     return keywords, news_details
 
 
+def fetch_players_from_db(team_code):
+    connection = get_oracle_connection()
+    cursor = connection.cursor()
+
+    query = """
+        SELECT name, image_url, position
+        FROM players
+        WHERE team_code = :team_code
+    """
+
+    cursor.execute(query, team_code=team_code)
+    rows = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    players = [{'name': row[0], 'image_url': row[1], 'position': row[2]} for row in rows]
+
+    return players
+
+
 # Streamlit 앱 설정
 st.set_page_config(
     page_title="Home in Run",
@@ -79,7 +100,7 @@ team_logo_path = "team_logo2/"
 
 # 사이드바 메뉴 설정
 st.sidebar.title("메뉴")
-menu = st.sidebar.radio("선택하세요", ("메인페이지", "구단별 뉴스토픽 조회", "구단별 선수 조회"))
+menu = st.sidebar.radio("선택하세요", ("메인페이지", "구단별 뉴스토픽 조회", "구단별 선수 조회","구장 주변 맛집&숙소 정보"))
 
 # 메인 페이지
 if menu == "메인페이지":
@@ -120,7 +141,7 @@ elif menu == "구단별 뉴스토픽 조회":
                                                max_value=datetime.date.today(), key=f"start_date_{team_code}")
 
                 with col2:
-                    end_date = st.date_input("종료 날짜", min_value=start_date,
+                    end_date = st.date_input("종료 날짜", min_value=datetime.date(2020, 1, 1),
                                              max_value=datetime.date.today(), key=f"end_date_{team_code}")
 
                 submit_button = st.form_submit_button("조회")
@@ -166,6 +187,46 @@ elif menu == "구단별 뉴스토픽 조회":
 
 # 추후 추가 예정 페이지
 elif menu == "구단별 선수 조회":
-    st.title("추후 추가 예정")
+    st.title("구단별 선수 조회")
+
+    # 팀 코드 사전
     tabs = st.tabs(list(team_codes.keys()))
-    st.markdown("이 페이지는 추후 추가될 기능을 위한 공간입니다.")
+
+    for i, (team_name, team_code) in enumerate(team_codes.items()):
+        with tabs[i]:
+            st.header(f"{team_name} 선수 목록")
+
+            # 검색 박스 추가
+            search_query = st.text_input(f"{team_name} 선수 이름 검색", "", key=f"search_{team_code}")
+
+            # 데이터 로드
+            with st.spinner(f"{team_name} 선수 정보를 가져오는 중입니다..."):
+                players = fetch_players_from_db(team_code)
+
+                if not players:
+                    st.warning("해당 팀의 선수 정보가 없습니다.")
+                else:
+                    # 데이터프레임 생성
+                    df = pd.DataFrame(players)
+
+                    # 검색 필터링
+                    if search_query:
+                        df = df[df['name'].str.contains(search_query, case=False, na=False)]
+
+                    if df.empty:
+                        st.warning("검색 결과가 없습니다.")
+                    else:
+                        # 선수 목록 테이블 표시
+                        st.write("### 선수 목록")
+                        for _, player in df.iterrows():
+                            col1, col2 = st.columns([1, 3])
+                            with col1:
+                                st.image(player['image_url'], width=100)
+                            with col2:
+                                st.markdown(f"**선수**: {player['name']}")
+                                st.markdown(f"**포지션**: {player['position']}")
+
+
+
+elif menu == "구장 주변 맛집&숙소 정보":
+    st.title("구장 주변 맛집&숙소 정보")
